@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System with NEOs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: grab;
+        }
+        
+        #canvas:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        button {
+            padding: 8px;
+            background: #4b5563;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #374151;
+        }
+        
+        .speed-btn {
+            background: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .speed-btn:hover {
+            background: #374151;
+        }
+        
+        .zoom-btn {
+            background: #4b5563;
+            font-weight: bold;
+        }
+        
+        .zoom-btn:hover {
+            background: #374151;
+        }
+        
+        .info-section {
+            font-size: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #4b5563;
+            margin-top: 12px;
+        }
+        
+        .info-section div {
+            margin: 4px 0;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        .info-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .info-panel p {
+            font-size: 12px;
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        
+        .highlight-yellow {
+            color: red;
+        }
+        
+        .highlight-blue {
+            color: #7bb3f7;
+        }
+        /* Delete Button - Unique */
+/* Small Delete Button */
+.BtnDelete {
+  width: 100px;         
+  height: 30px;        
+  margin-top: 20px;    
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: #e62222;
+  border: none;
+  border-radius: 4px;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+  transition: 200ms;
+  font-size: 10px; 
+}
+
+.BtnDelete span {
+  transition: 200ms;
+}
+
+.BtnDelete-text {
+  transform: translateX(18px);  
+  color: white;
+  font-weight: bold;
+}
+
+.BtnDelete-icon {
+  position: absolute;
+  border-left: 1px solid #c41b1b;
+  transform: translateX(65px);  
+  height: 22px;
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.BtnDelete-icon svg {
+  width: 10px;
+  fill: #eee;
+}
+
+.BtnDelete:hover {
+  background: #ff3636;
+}
+
+.BtnDelete:hover .BtnDelete-text {
+  color: transparent;
+}
+
+.BtnDelete:hover .BtnDelete-icon {
+  width: 90px;           
+  border-left: none;
+  transform: translateX(0);
+}
+
+.BtnDelete:focus {
+  outline: none;
+}
+
+.BtnDelete:active .BtnDelete-icon svg {
+  transform: scale(0.8);
+}
+
+
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="controls">
+        <div class="controls-title">Solar System Visualizer</div>
+        
+        <div class="button-group">
+            <button id="playBtn" title="Play/Pause">⏸</button>
+            <button id="speedBtn" class="speed-btn">
+                <span id="speedText">1x</span>
+            </button>
+        </div>
+        
+        <div class="button-group">
+            <button class="zoom-btn" id="zoomOut" title="Zoom Out">−</button>
+            <button class="zoom-btn" id="zoomIn" title="Zoom In">+</button>
+        </div>
+        
+        <div class="info-section">
+            <div>🟡 - Sun & Planets</div>
+            <div>⚪ - NEOs (<span id="neoCount">0</span>)</div>
+            <div>⚫ - Asteroids (≈200)</div>
+            <div>🔵 - Comets (≈15)</div>
+        </div>
+        
+
+            <!-- From Uiverse.io by cssbuttons-io --> 
+
+<!-- From Uiverse.io by cssbuttons-io -->
+ <button class="BtnDelete" onclick="window.location.href='Index.html'">
+  <span class="BtnDelete-text">Go Back</span>
+  <span class="BtnDelete-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"></path>
+    </svg>
+  </span>
+</button>
+
+
+
+        </div>
+    </div>
+    <div class="info-panel">
+        <div class="info-panel-title">About This Visualization</div>
+        <p>This simulation shows our solar system, simulated near-Earth objects (NEOs), main belt asteroids, and comets that usually zoom around!</p>
+        <p class="highlight-yellow">Red highlights indicate NEOs close to Earth's orbit.</p>
+        <p class="highlight-blue">Comet tails point away from the Sun and grow as they approach it.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Camera state
+        const camera = {
+            x: 0,
+            y: 0,
+            zoom: 0.5,
+            targetZoom: 0.5,
+            rotation: 0
+        };
+        
+        // Planets data
+        const planets = [
+            { name: 'Mercury', radius: 4, orbit: 80, speed: 0.04, color: '#8C7853', angle: 0, tilt: 0.1 },
+            { name: 'Venus', radius: 6, orbit: 120, speed: 0.015, color: '#FFC649', angle: 0, tilt: 0.05 },
+            { name: 'Earth', radius: 6, orbit: 160, speed: 0.01, color: '#4A90E2', angle: 0, tilt: 0.4 },
+            { name: 'Mars', radius: 5, orbit: 200, speed: 0.008, color: '#E27B58', angle: 0, tilt: 0.44 },
+            { name: 'Jupiter', radius: 20, orbit: 320, speed: 0.002, color: '#C88B3A', angle: 0, tilt: 0.23 },
+            { name: 'Saturn', radius: 16, orbit: 450, speed: 0.0009, color: '#FAD5A5', angle: 0, tilt: 0.47 },
+            { name: 'Uranus', radius: 12, orbit: 550, speed: 0.0004, color: '#4FD0E7', angle: 0, tilt: 1.71 },
+            { name: 'Neptune', radius: 12, orbit: 650, speed: 0.0001, color: '#4166F5', angle: 0, tilt: 0.49 }
+        ];
+        
+        // Sun
+        const sun = { x: 0, y: 0, radius: 30, color: '#FDB813' };
+        
+        // Near-Earth Objects
+        const neos = [];
+        const asteroids = [];
+        const comets = [];
+        
+        // Generate NEOs with elliptical orbits
+        function generateNEOs() {
+            // Near-Earth Asteroids
+            for (let i = 0; i < 50; i++) {
+                neos.push({
+                    name: `NEO-${i}`,
+                    semiMajor: 100 + Math.random() * 120,
+                    eccentricity: 0.1 + Math.random() * 0.4,
+                    inclination: (Math.random() - 0.5) * 0.5,
+                    angle: Math.random() * Math.PI * 2,
+                    speed: 0.02 + Math.random() * 0.03,
+                    radius: 1 + Math.random(),
+                    color: '#AAA',
+                    type: 'NEO'
+                });
+            }
+            
+            // Main Belt Asteroids
+            for (let i = 0; i < 200; i++) {
+                asteroids.push({
+                    name: `Asteroid-${i}`,
+                    semiMajor: 220 + Math.random() * 100,
+                    eccentricity: 0.05 + Math.random() * 0.2,
+                    inclination: (Math.random() - 0.5) * 0.3,
+                    angle: Math.random() * Math.PI * 2,
+                    speed: 0.005 + Math.random() * 0.005,
+                    radius: 0.5 + Math.random() * 0.5,
+                    color: '#777',
+                    type: 'Asteroid'
+                });
+            }
+            
+            // Comets
+            for (let i = 0; i < 15; i++) {
+                comets.push({
+                    name: `Comet-${i}`,
+                    semiMajor: 150 + Math.random() * 500,
+                    eccentricity: 0.5 + Math.random() * 0.4,
+                    inclination: (Math.random() - 0.5) * 1.2,
+                    angle: Math.random() * Math.PI * 2,
+                    speed: 0.001 + Math.random() * 0.01,
+                    radius: 1.5,
+                    color: '#88CCFF',
+                    type: 'Comet'
+                });
+            }
+            
+            document.getElementById('neoCount').textContent = neos.length;
+        }
+        generateNEOs();
+        
+        // Mouse interaction
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                camera.x -= dx / camera.zoom;
+                camera.y -= dy / camera.zoom;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            camera.targetZoom = Math.max(0.1, Math.min(5, camera.targetZoom * zoomFactor));
+        }, { passive: false });
+        
+        // Convert orbital elements to position
+        function getPosition(obj, time) {
+            const M = obj.angle + obj.speed * time;
+            const E = M;
+            
+            const x = obj.semiMajor * (Math.cos(E) - obj.eccentricity);
+            const y = obj.semiMajor * Math.sqrt(1 - obj.eccentricity * obj.eccentricity) * Math.sin(E);
+            
+            const z = y * obj.inclination;
+            
+            return { x, y: y - z };
+        }
+        
+        // Animation state
+        let isPlaying = true;
+        let speed = 0.01;
+        let time = 0;
+        const speeds = [0.001, 0.01, 0.05, 0.1, 0.25, 0.5, 1];
+        const speedLabels = ['0.1x', '1x', '5x', '10x', '25x', '50x', '100x'];
+        let speedIndex = 1;
+        
+        // Draw function
+        function draw() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 200; i++) {
+                const x = (i * 123.456) % canvas.width;
+                const y = (i * 987.654) % canvas.height;
+                ctx.fillRect(x, y, 1, 1);
+            }
+            
+            // Smooth zoom
+            camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
+            
+            const centerX = canvas.width / 2 - camera.x * camera.zoom;
+            const centerY = canvas.height / 2 - camera.y * camera.zoom;
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.scale(camera.zoom, camera.zoom);
+            
+            // Draw orbit paths
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1 / camera.zoom;
+            
+            planets.forEach(planet => {
+                ctx.beginPath();
+                ctx.arc(0, 0, planet.orbit, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // Draw Sun
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, sun.radius);
+            gradient.addColorStop(0, '#FFF4E0');
+            gradient.addColorStop(0.5, '#FDB813');
+            gradient.addColorStop(1, '#F97316');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, sun.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Update and draw planets
+            if (isPlaying) {
+                planets.forEach(planet => {
+                    planet.angle += planet.speed * speed;
+                });
+            }
+            
+            planets.forEach(planet => {
+                const x = Math.cos(planet.angle) * planet.orbit;
+                const y = Math.sin(planet.angle) * planet.orbit * Math.cos(planet.tilt);
+                
+                // Planet glow
+                const planetGrad = ctx.createRadialGradient(x, y, 0, x, y, planet.radius * 2);
+                planetGrad.addColorStop(0, planet.color);
+                planetGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = planetGrad;
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Planet
+                ctx.fillStyle = planet.color;
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Label
+                if (camera.zoom > 0.3) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = `${12 / camera.zoom}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(planet.name, x, y + planet.radius + 15 / camera.zoom);
+                }
+            });
+            
+            // Update time
+            if (isPlaying) {
+                time += speed;
+            }
+            
+            // Draw asteroids
+            asteroids.forEach(obj => {
+                const pos = getPosition(obj, time);
+                ctx.fillStyle = obj.color;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, obj.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw NEOs
+            neos.forEach(obj => {
+                const pos = getPosition(obj, time);
+                ctx.fillStyle = obj.color;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, obj.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Highlight if close to Earth
+                const earthPos = {
+                    x: Math.cos(planets[2].angle) * planets[2].orbit,
+                    y: Math.sin(planets[2].angle) * planets[2].orbit
+                };
+                const dist = Math.sqrt((pos.x - earthPos.x) ** 2 + (pos.y - earthPos.y) ** 2);
+                if (dist < 30) {
+                    ctx.strokeStyle = 'rgba(255, 100, 100, 0.5)';
+                    ctx.lineWidth = 2 / camera.zoom;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, obj.radius + 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw comets with tails
+            comets.forEach(obj => {
+                const pos = getPosition(obj, time);
+                
+                // Comet tail
+                const tailLength = 20 * (1 - Math.min(pos.x * pos.x + pos.y * pos.y, 100000) / 100000);
+                const angle = Math.atan2(pos.y, pos.x);
+                const tailGrad = ctx.createLinearGradient(pos.x, pos.y,
+                    pos.x + Math.cos(angle) * tailLength,
+                    pos.y + Math.sin(angle) * tailLength);
+                tailGrad.addColorStop(0, 'rgba(136, 204, 255, 0.6)');
+                tailGrad.addColorStop(1, 'rgba(136, 204, 255, 0)');
+                
+                ctx.strokeStyle = tailGrad;
+                ctx.lineWidth = 3 / camera.zoom;
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                ctx.lineTo(pos.x + Math.cos(angle) * tailLength, pos.y + Math.sin(angle) * tailLength);
+                ctx.stroke();
+                
+                // Comet nucleus
+                ctx.fillStyle = obj.color;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, obj.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.restore();
+            
+            requestAnimationFrame(draw);
+        }
+        
+        // Controls
+        document.getElementById('playBtn').addEventListener('click', function() {
+            isPlaying = !isPlaying;
+            this.textContent = isPlaying ? '⏸' : '▶';
+        });
+        
+        document.getElementById('speedBtn').addEventListener('click', function() {
+            speedIndex = (speedIndex + 1) % speeds.length;
+            speed = speeds[speedIndex];
+            document.getElementById('speedText').textContent = speedLabels[speedIndex];
+        });
+        
+        document.getElementById('zoomIn').addEventListener('click', function() {
+            camera.targetZoom = Math.min(5, camera.targetZoom * 1.3);
+        });
+        
+        document.getElementById('zoomOut').addEventListener('click', function() {
+            camera.targetZoom = Math.max(0.1, camera.targetZoom * 0.7);
+        });
+        
+        // Start animation
+        draw();
+    </script>
+</body>
+</html>
